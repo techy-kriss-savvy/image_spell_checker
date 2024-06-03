@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Spell Checker</title>
+    <style>
+        /* Global Styles */
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f8f8;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background-color: #fff;
+            padding: 20px 0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        header h1 {
+            margin: 0;
+            color: #333;
+        }
+        nav {
+            margin-top: 20px;
+        }
+        nav a {
+            text-decoration: none;
+            color: #666;
+            margin: 0 10px;
+            transition: color 0.3s ease;
+        }
+        nav a:hover {
+            color: #333;
+        }
+        footer {
+            background-color: #333;
+            color: #fff;
+            padding: 20px 0;
+            text-align: center;
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+        }
+        footer p {
+            margin: 0;
+        }
+
+        /* Spell Checker Styles */
+        h2 {
+            margin-top: 40px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .upload-section {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        #fileInput {
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 10px 2px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: rgb(181, 181, 238);
+        }
+        #result {
+            padding: 20px;
+            border-radius: 8px;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            text-align: left;
+        }
+        .misspelled {
+            text-decoration: underline;
+            text-decoration-color: red;
+            text-decoration-style: wavy;
+            position: relative;
+        }
+        .misspelled:hover .tooltip {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        .tooltip {
+            display: none;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 5px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+        @keyframes fadeIn {
+            from {opacity: 0;}
+            to {opacity: 1;}
+        }
+        .loader {
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            display: none;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Image Spell Checker</h1>
+            <nav>
+                <a href="#">Home</a>
+                <a href="#contact">Contact</a>
+                <a href="#about">About</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="upload-section">
+            <h2>Upload Image</h2>
+            <input type="file" id="fileInput" accept="image/*">
+            <button onclick="uploadImage()">Upload</button>
+            <div id="loading" class="loader"></div>
+        </div>
+
+        <div id="result"></div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 Image Spell Checker. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <div id="about" class="container">
+        <h2>About</h2>
+        <p>This website provides an image spell checker tool. Simply upload an image containing text, and it will check for spelling errors and provide corrections.</p>
+    </div>
+
+    <script>
+        async function uploadImage() {
+            const input = document.getElementById('fileInput');
+            const file = input.files[0];
+            if (!file || !file.type.startsWith('image/')) {
+                alert('Please upload a valid image file.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+            document.getElementById('result').innerHTML = ''; // Clear previous result
+            document.getElementById('loading').style.display = 'block'; // Show loader
+
+            try {
+                const response = await fetch('http://127.0.0.1:5000/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                displayTextWithCorrections(data.text, data.corrections || {});
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('result').innerHTML = 'Error processing the image.';
+            } finally {
+                document.getElementById('loading').style.display = 'none'; // Hide loader
+            }
+        }
+
+        function displayTextWithCorrections(text, corrections) {
+            const resultDiv = document.getElementById('result');
+            const words = text.split(' ');
+            const correctedText = words.map(word => {
+                const cleanWord = word.replace(/[^a-zA-Z]/g, ''); // Remove punctuation for checking
+                if (corrections[cleanWord]) {
+                    return `<span class="misspelled">${word}<span class="tooltip">${corrections[cleanWord]}</span></span>`;
+                }
+                return word;
+            }).join(' ');
+            resultDiv.innerHTML = correctedText;
+        }
+    </script>
+   </body>
+</html>
